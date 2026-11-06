@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="36" viewBox="0 0 64 36">
+  <g fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5 27 H59"/>
+    <path d="M9 31 H55"/>
+    <path d="M18 24 C18 18 20 13 23 9"/>
+    <path d="M22 24 C22 17 25 12 29 8"/>
+    <path d="M27 24 C27 17 31 13 35 10"/>
+    <path d="M32 24 C32 18 36 14 41 12"/>
+    <path d="M15 24 C14 20 12 18 9 17"/>
+    <path d="M38 24 C40 20 43 18 47 17"/>
+    <path d="M29 19 C25 17 22 16 19 16"/>
+    <path d="M31 18 C35 16 38 15 42 15"/>
+  </g>
+</svg>

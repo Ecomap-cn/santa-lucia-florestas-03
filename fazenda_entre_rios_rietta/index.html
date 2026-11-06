@@ -1,0 +1,2317 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <link rel="stylesheet" href="css/leaflet.css">
+        <link rel="stylesheet" href="css/L.Control.Layers.Tree.css">
+        <link rel="stylesheet" href="css/L.Control.Locate.min.css">
+        <link rel="stylesheet" href="css/qgis2web.css">
+        <link rel="stylesheet" href="css/fontawesome-all.min.css">
+        <link rel="stylesheet" href="css/leaflet.photon.css">
+        <link rel="stylesheet" href="css/leaflet-measure.css">
+        <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
+        <style>
+        html, body, #map {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+        }
+
+/* ====== Custom UI (desktop + mobile) ====== */
+        .map-title{
+            position: absolute;
+            left: 12px;
+            bottom: 8px;
+            top: auto;
+            right: auto;
+            transform: none;
+            z-index: 950;
+            max-width: min(620px, calc(100% - 24px));
+            pointer-events: none;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #111;
+            text-align: left;
+        }
+        .map-title .box{
+            display: inline-block;
+            background: rgba(255,255,255,0.92);
+            border: 1px solid rgba(0,0,0,0.22);
+            border-radius: 10px;
+            padding: 5px 8px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.20);
+        }
+        .map-title .t1{
+            font-weight: 800;
+            font-size: 12px;
+            line-height: 1.15;
+            margin: 0;
+        }
+        .map-title .t2{
+            font-weight: 600;
+            font-size: 10px;
+            line-height: 1.15;
+            margin-top: 2px;
+            opacity: .9;
+        }
+
+        .map-logo{
+            position: absolute;
+            right: 10px;
+            bottom: 20px;
+            z-index: 1000;
+            background: transparent;
+            border: none;
+            border-radius: 0;
+            padding: 0;
+            box-shadow: none;
+        }
+        .map-logo img{
+            display: block;
+            width: 150px;
+            height: auto;
+            max-width: 32vw;
+            opacity: 1;
+        }
+
+        /* Home (recenter) control */
+        .leaflet-control-home a{
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+            text-align: center;
+            display: block;
+            color: #111;
+            background: #fff;
+        }
+        .leaflet-control-home a:hover{
+            background: #f3f3f3;
+        }
+
+        /* Matrículas label background (tooltip) */
+        .css_Matricula_dot_20{
+            background: transparent !important; /* let inner div handle background */
+            border: none !important;
+            box-shadow: none !important;
+        }
+        .matricula-label{
+            background: rgba(255,255,255,0.92);
+            border: 1px solid rgba(0,0,0,0.25);
+            border-radius: 6px;
+            padding: 2px 6px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.20);
+            white-space: nowrap;
+        }
+
+
+        /* Toggle Matrículas labels */
+        body.hide-matriculas-labels .css_Matricula_dot_20{
+            display: none !important;
+        }
+
+        /* Mobile tweaks */
+        @media (max-width: 768px){
+            .map-title{
+                top: auto;
+                bottom: 10px;
+                left: 10px;
+                right: auto;
+                transform: none;
+                max-width: 88vw;
+            }
+            body.layers-open .map-title{display:none;}
+            .map-title .t1{
+                font-size: 12px;
+            }
+            .map-title .t2{
+                font-size: 10.5px;
+            }
+            .map-logo img{
+            display: block;
+            width: 150px;
+            height: auto;
+            max-width: 32vw;
+            opacity: 1;
+        }
+            .leaflet-control-home a{
+                width: 34px;
+                height: 34px;
+                line-height: 34px;
+            }
+        }
+        
+        /* ===== EcoMap Controls (Measure) ===== */
+        .ecomap-controls.leaflet-bar a{
+            width:34px; height:34px;
+            line-height:34px;
+            text-align:center;
+            font-size:16px;
+        }
+        .ecomap-controls.leaflet-bar a,
+        .ecomap-controls.leaflet-bar a:hover{
+            background: rgba(255,255,255,0.92);
+            color:#111;
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+        }
+        .ecomap-controls.leaflet-bar a:last-child{
+            border-bottom:none;
+        }
+        .ecomap-controls .is-active{
+            background: #111 !important;
+            color: #fff !important;
+        }
+
+        .ecomap-measure-tooltip{
+            background: rgba(17,17,17,0.92);
+            color:#fff;
+            border:0;
+            border-radius:10px;
+            padding:8px 10px;
+            box-shadow: 0 10px 24px rgba(0,0,0,.25);
+            font-weight:700;
+            font-size:12px;
+        }
+        .ecomap-measure-tooltip:before{
+            border-top-color: rgba(17,17,17,0.92) !important;
+        }
+
+        .ecomap-hint{
+            position: absolute;
+            left: 12px;
+            bottom: 56px;
+            z-index: 980;
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: rgba(17,17,17,0.70);
+            color: rgba(255,255,255,0.92);
+            font-size: 12px;
+            line-height: 1.3;
+            display:none;
+            max-width: 420px;
+            backdrop-filter: blur(6px);
+        }
+        @media (max-width: 700px){
+            .ecomap-hint{max-width: 88vw;}
+        }
+
+        
+
+        /* ===== EcoMap Controls (Anotações) ===== */
+        .ecomap-notes-controls.leaflet-bar a{
+            width:34px; height:34px;
+            line-height:34px;
+            text-align:center;
+            font-size:16px;
+        }
+        .ecomap-notes-controls.leaflet-bar a,
+        .ecomap-notes-controls.leaflet-bar a:hover{
+            background: rgba(255,255,255,0.92);
+            color:#111;
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+        }
+        .ecomap-notes-controls.leaflet-bar a:last-child{
+            border-bottom:none;
+        }
+        .ecomap-notes-controls .is-active{
+            background: #111 !important;
+            color: #fff !important;
+        }
+  
+/* ===== EcoMap Controls: grupos colapsáveis (Trena / Anotações) ===== */
+.ecomap-group .ecomap-sub{ display:none; }
+.ecomap-group.is-open .ecomap-sub{ display:block; }
+
+/* garante centralização dos ícones dentro dos botões */
+.ecomap-controls.leaflet-bar a,
+.ecomap-notes-controls.leaflet-bar a{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* ícone principal de anotações (imagem) */
+.ecomap-notes-controls .ecomap-notes-main img{
+  width:18px;
+  height:18px;
+  display:block;
+}
+
+/* ícone polígono (SVG) */
+.ecomap-notes-controls .ecomap-ico-poly svg{
+  width:18px;
+  height:18px;
+  display:block;
+}
+
+
+/* durante desenho (Leaflet.draw), o polígono/linha temporários não podem "capturar" clique.
+   isso permite adicionar vértice mesmo clicando dentro do polígono em criação */
+#map.leaflet-draw-draw-polygon .leaflet-overlay-pane .leaflet-interactive,
+#map.leaflet-draw-draw-polyline .leaflet-overlay-pane .leaflet-interactive{
+  pointer-events: none !important;
+}
+/* EcoMap - Tabela flutuante de anotações */
+  #ecomapNotesTablePanel{
+    position:absolute;
+    /* mantém a tabela sempre à direita da coluna de botões (evita sobreposição) */
+    left: 54px;
+    right: 10px;
+    bottom: 56px;
+    z-index:9999;
+    background:rgba(0,0,0,0.72);
+    color:#fff;
+    padding:8px 10px;
+    border-radius:10px;
+    width:auto;
+    max-width:520px; /* evita ficar exagerada em telas maiores */
+    font-family: Arial, Helvetica, sans-serif;
+    font-size:12px;
+    box-shadow:0 6px 18px rgba(0,0,0,0.35);
+    display:none;
+  }
+  /* tabela mais “enxuta” (sem espaço vazio à direita) */
+  #ecomapNotesTablePanel table{
+    width:100%;
+    border-collapse:collapse;
+    table-layout:auto;          /* permite a coluna de medições crescer */
+    min-width: 620px;           /* força scroll horizontal no mobile quando necessário */
+  }
+  #ecomapNotesTablePanel th:nth-child(1), #ecomapNotesTablePanel td:nth-child(1){ width:38%; }
+  #ecomapNotesTablePanel th:nth-child(2), #ecomapNotesTablePanel td:nth-child(2){ width:18%; }
+  #ecomapNotesTablePanel th:nth-child(3), #ecomapNotesTablePanel td:nth-child(3){ width:44%; }
+
+  #ecomapNotesTablePanel th, #ecomapNotesTablePanel td{
+    white-space:nowrap;
+  }
+  /* mantém elipse só nas colunas curtas */
+  #ecomapNotesTablePanel th:nth-child(1), #ecomapNotesTablePanel td:nth-child(1),
+  #ecomapNotesTablePanel th:nth-child(2), #ecomapNotesTablePanel td:nth-child(2){
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  /* coluna de medições: mostra completo (com rolagem horizontal) */
+  #ecomapNotesTablePanel th:nth-child(3), #ecomapNotesTablePanel td:nth-child(3){
+    overflow:visible;
+    text-overflow:clip;
+  }
+
+  /* rolagem vertical e limite de altura (para não subir demais) */
+  #ecomapNotesTableWrap{
+    max-height:160px;
+    overflow-y:auto;
+    overflow-x:auto;            /* rolagem horizontal para coordenadas */
+    -webkit-overflow-scrolling: touch;
+  }
+
+  @media (max-width: 768px){
+    #ecomapNotesTablePanel{
+      left: 52px;
+      right: 8px;
+      bottom: 52px;
+      max-width:none; /* usa o right/left como limite */
+    }
+    #ecomapNotesTableWrap{ max-height:140px; }
+  }
+
+  #ecomapNotesTablePanel h4{
+    margin:0 0 8px 0;
+    font-size:12px;
+    font-weight:bold;
+    letter-spacing:0.2px;
+  }
+  #ecomapNotesTablePanel table{
+    width:100%;
+    border-collapse:collapse;
+  }
+  #ecomapNotesTablePanel th, #ecomapNotesTablePanel td{
+    border-bottom:1px solid rgba(255,255,255,0.18);
+    padding:4px 6px;
+    text-align:left;
+    vertical-align:top;
+  }
+  #ecomapNotesTablePanel th{
+    font-weight:bold;
+    opacity:0.95;
+  }
+  #ecomapNotesTablePanel .small{ opacity:0.9; font-size:11px; }
+
+  /* EcoMap - Botão da tabela (somente mobile; aparece quando houver feições) */
+  .ecomap-notes-tablebtn{ display:block; }
+  @media (max-width: 768px){
+    .ecomap-notes-tablebtn{ display:block; }
+  }
+
+
+        /* ===== Anotações: reduzir área clicável dos vértices (evita "travamento" perto do 1º ponto em zoom baixo) ===== */
+        .notes-vertex-icon{
+            width: 8px !important;
+            height: 8px !important;
+            margin-left: -4px !important;
+            margin-top: -4px !important;
+            border: 2px solid #fff !important;
+            background: #111 !important;
+            border-radius: 50% !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.35);
+        }
+    
+
+  /* ===== EcoMap: Barra Finalizar/Cancelar (mobile + desktop) ===== */
+  #ecomapFinishBar{
+    position:absolute;
+    left:50%;
+    transform:translateX(-50%);
+    bottom: 95px;
+    z-index:10000;
+    display:none;
+    gap:10px;
+    align-items:center;
+    justify-content:center;
+    background:rgba(0,0,0,0.72);
+    padding:10px 12px;
+    border-radius:999px;
+    box-shadow:0 6px 18px rgba(0,0,0,0.35);
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  #ecomapFinishBar button{
+    border:0;
+    border-radius:999px;
+    padding:10px 14px;
+    font-weight:700;
+    font-size:14px;
+    cursor:pointer;
+  }
+  #ecomapFinishBar .btn-ok{ background:#ffffff; color:#111; }
+  #ecomapFinishBar .btn-cancel{ background:rgba(255,255,255,0.14); color:#fff; border:1px solid rgba(255,255,255,0.25); }
+  @media (max-width: 768px){
+    #ecomapFinishBar{ bottom: 120px; width: calc(100vw - 24px); max-width: 520px; }
+    #ecomapFinishBar button{ flex:1; }
+  }
+
+
+
+        /* Toggle Matrículas labels - Fazenda Madekin */
+        body.hide-matriculas-labels .css_Matricula_dot_20{
+            display: none !important;
+        }
+        /* Botão 123 */
+        .ecomap-labels-controls.leaflet-bar a{
+            width:34px; height:34px;
+            line-height:34px;
+            text-align:center;
+            font-size:13px;
+            font-weight:800;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            background: rgba(255,255,255,0.92);
+            color:#111;
+            text-decoration:none;
+        }
+        .ecomap-labels-controls.leaflet-bar a:hover{ background:#f3f3f3; }
+        .ecomap-labels-controls.leaflet-bar a.is-active{
+            background:#111 !important;
+            color:#fff !important;
+        }
+
+
+</style>
+        <title></title>
+    </head>
+    <body>
+        <div id="map">
+        </div>
+
+        <div id="ecomapFinishBar" aria-hidden="true">
+          <button type="button" class="btn-ok" id="ecomapBtnFinish">Finalizar</button>
+          <button type="button" class="btn-cancel" id="ecomapBtnCancel">Cancelar</button>
+        </div>
+        <div id="ecomapHint" class="ecomap-hint" aria-hidden="true"></div>
+        <div class="map-title" aria-hidden="true">
+            <div class="box">
+                <div class="t1">Fazenda Entre Rios - Rietta</div>
+                <div class="t2">Santa Lúcia Madeiras</div>
+            </div>
+        </div>
+        <div class="map-logo" aria-hidden="true">
+            <img src="images/logo-site-final-2.png" alt="Santa Lúcia Madeiras" />
+        </div>
+        <script src="js/qgis2web_expressions.js"></script>
+        <script src="js/leaflet.js"></script>
+        <script src="js/L.Control.Layers.Tree.min.js"></script>
+        <script src="js/L.Control.Locate.min.js"></script>
+        <script src="js/leaflet.rotatedMarker.js"></script>
+        <script src="js/leaflet.pattern.js"></script>
+        <script src="js/leaflet-hash.js"></script>
+        <script src="js/Autolinker.min.js"></script>
+        <script src="js/rbush.min.js"></script>
+        <script src="js/labelgun.min.js"></script>
+        <script src="js/labels.js"></script>
+        <script src="js/leaflet.photon.js"></script>
+        <script src="js/leaflet-measure.js"></script>
+        <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+        <script src="data/CursoDgua_11.js"></script>
+        <script src="data/APP_12.js"></script>
+        <script src="data/Vegetao_13.js"></script>
+        <script src="data/FaixadeServido_14.js"></script>
+        <script src="data/Estrada_15.js"></script>
+        <script src="data/Eucalipto_16.js"></script>
+        <script src="data/Pinus2024_17.js"></script>
+        <script src="data/Matrcula17184_18.js"></script>
+        <script src="data/Matrcula17183_19.js"></script>
+        <script src="data/Matricula_dot_20.js"></script>
+        <script>
+        var map = L.map('map', {
+            zoomControl:false, maxZoom:28, minZoom:1
+        }).fitBounds([[-27.60768460252518,-51.41849196306844],[-27.600739701253055,-51.403533871752025]]);
+        var hash = new L.Hash(map);
+        map.attributionControl.setPrefix('<a href="https://github.com/qgis2web/qgis2web" target="_blank">qgis2web</a> &middot; <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> &middot; <a href="https://qgis.org">QGIS</a>');
+        var autolinker = new Autolinker({truncate: {length: 30, location: 'smart'}});
+        // remove popup's row if "visible-with-data"
+        function removeEmptyRowsFromPopupContent(content, feature) {
+         var tempDiv = document.createElement('div');
+         tempDiv.innerHTML = content;
+         var rows = tempDiv.querySelectorAll('tr');
+         for (var i = 0; i < rows.length; i++) {
+             var td = rows[i].querySelector('td.visible-with-data');
+             var key = td ? td.id : '';
+             if (td && td.classList.contains('visible-with-data') && feature.properties[key] == null) {
+                 rows[i].parentNode.removeChild(rows[i]);
+             }
+         }
+         return tempDiv.innerHTML;
+        }
+        // modify popup if contains media
+        function addClassToPopupIfMedia(content, popup) {
+            var tempDiv = document.createElement('div');
+            tempDiv.innerHTML = content;
+            var imgTd = tempDiv.querySelector('td img');
+            if (imgTd) {
+                var src = imgTd.getAttribute('src');
+                if (/\.(jpg|jpeg|png|gif|bmp|webp|avif)$/i.test(src)) {
+                    popup._contentNode.classList.add('media');
+                    setTimeout(function() {
+                        popup.update();
+                    }, 10);
+                } else if (/\.(mp3|wav|ogg|aac)$/i.test(src)) {
+                    var audio = document.createElement('audio');
+                    audio.controls = true;
+                    audio.src = src;
+                    imgTd.parentNode.replaceChild(audio, imgTd);
+                    popup._contentNode.classList.add('media');
+                    setTimeout(function() {
+                        popup.setContent(tempDiv.innerHTML);
+                        popup.update();
+                    }, 10);
+                } else if (/\.(mp4|webm|ogg|mov)$/i.test(src)) {
+                    var video = document.createElement('video');
+                    video.controls = true;
+                    video.src = src;
+                    video.style.width = "400px";
+                    video.style.height = "300px";
+                    video.style.maxHeight = "60vh";
+                    video.style.maxWidth = "60vw";
+                    imgTd.parentNode.replaceChild(video, imgTd);
+                    popup._contentNode.classList.add('media');
+                    // Aggiorna il popup quando il video carica i metadati
+                    video.addEventListener('loadedmetadata', function() {
+                        popup.update();
+                    });
+                    setTimeout(function() {
+                        popup.setContent(tempDiv.innerHTML);
+                        popup.update();
+                    }, 10);
+                } else {
+                    popup._contentNode.classList.remove('media');
+                }
+            } else {
+                popup._contentNode.classList.remove('media');
+            }
+        }
+        var zoomControl = L.control.zoom({
+            position: 'topleft'
+        }).addTo(map);
+        L.control.locate({locateOptions: {maxZoom: 19}}).addTo(map);
+/* ====== Home / Recenter control (Casinha) ====== */
+        var HomeControl = L.Control.extend({
+            options: { position: 'topleft' },
+            onAdd: function(map) {
+                var container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-home');
+                var link = L.DomUtil.create('a', '', container);
+                link.href = '#';
+                link.title = 'Recentrar a ortofoto';
+                link.setAttribute('aria-label', 'Recentrar a ortofoto');
+                link.innerHTML = '<i class="fas fa-home"></i>';
+                L.DomEvent.disableClickPropagation(container);
+                L.DomEvent.on(link, 'click', function(e) {
+                    L.DomEvent.stop(e);
+                    if (bounds_group && bounds_group.getBounds && bounds_group.getBounds().isValid()) {
+                        map.fitBounds(bounds_group.getBounds(), {padding: [20, 20]});
+                    }
+                });
+                return container;
+            }
+        });
+        map.addControl(new HomeControl());
+
+        // ===== Trena EcoMap (com casas decimais + área/perímetro) =====
+        // Como usar:
+        // 1) Clique na régua para ativar
+        // 2) Clique no mapa para adicionar pontos
+        // 3) Duplo-clique para finalizar
+        // 4) Botão 🗑 para limpar
+        var hintEl = document.getElementById('ecomapHint');
+
+        function showHint(html){
+            if(!hintEl) return;
+            hintEl.innerHTML = html;
+            hintEl.style.display = 'block';
+        }
+        function hideHint(){
+            if(!hintEl) return;
+            hintEl.style.display = 'none';
+        }
+
+        function formatPtBR(n, decimals){
+            try{
+                return n.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+            }catch(e){
+                var s = n.toFixed(decimals);
+                return s.replace('.', ',');
+            }
+        }
+
+        function formatArea(m2){
+            if(m2 >= 10000){
+                return formatPtBR(m2/10000, 4) + ' ha';
+            }
+            return formatPtBR(m2, 2) + ' m²';
+        }
+
+        // Cálculo de área geodésica (sem dependências externas)
+        // Fórmula esférica (variação Chamberlain & Duquette), usada em diversas ferramentas Leaflet.
+        function geodesicArea(latLngs){
+            var points = latLngs;
+            if(!points || points.length < 3) return 0;
+
+            var radius = 6378137; // WGS84 (m)
+            var area = 0;
+
+            for (var i = 0, len = points.length; i < len; i++) {
+                var p1 = points[i];
+                var p2 = points[(i + 1) % len];
+
+                var lon1 = p1.lng * Math.PI / 180;
+                var lon2 = p2.lng * Math.PI / 180;
+                var lat1 = p1.lat * Math.PI / 180;
+                var lat2 = p2.lat * Math.PI / 180;
+
+                area += (lon2 - lon1) * (2 + Math.sin(lat1) + Math.sin(lat2));
+            }
+
+            area = area * radius * radius / 2.0;
+            return Math.abs(area);
+        }
+
+        function formatDistance(meters){
+            if(meters >= 1000){
+                return formatPtBR(meters/1000, 3) + ' km';
+            }
+            return formatPtBR(meters, 2) + ' m';
+        }
+
+        var measureActive = false;
+        var measurePolygon = null;
+        var measurePoints = [];
+        var measureLine = null;
+        var tempLine = null;
+        
+// Pane acima dos overlays para desenhar a Trena EcoMap sempre visível
+map.createPane('pane_EcoMapMeasure');
+map.getPane('pane_EcoMapMeasure').style.zIndex = 100000;
+// Renderer dedicado para garantir que os vetores da trena sejam desenhados neste pane
+var ecomapMeasureRenderer = L.svg({ pane: 'pane_EcoMapMeasure' });
+// Garante que a trena fique sempre ACIMA dos ortomosaicos (panes do qgis2web)
+function ecomapBringMeasureToFront(){
+    try{
+        // pane da trena
+        var p = map.getPane('pane_EcoMapMeasure');
+        if(p) p.style.zIndex = 100000;
+
+        // tooltips/popups acima também
+        var tp = map.getPane('tooltipPane');
+        if(tp) tp.style.zIndex = 110000;
+        var pp = map.getPane('popupPane');
+        if(pp) pp.style.zIndex = 110000;
+
+        // paths já desenhados
+        if(measureLayer && measureLayer.eachLayer){
+            measureLayer.eachLayer(function(lyr){
+                if(lyr && lyr.bringToFront) lyr.bringToFront();
+            });
+        }
+    }catch(e){}
+}
+
+// deixa os cliques passarem para o mapa (a trena não precisa capturar eventos)
+map.getPane('pane_EcoMapMeasure').style.pointerEvents = 'none';
+
+var measureLayer = L.layerGroup().addTo(map);
+        ecomapBringMeasureToFront();
+        var measureTooltip = L.tooltip({
+            permanent:false,
+            direction:'top',
+            offset:[0,-12],
+            className:'ecomap-measure-tooltip',
+            opacity:1
+        });
+
+        function computeTotalDistance(points){
+            var total = 0;
+            for(var i=1;i<points.length;i++){
+                total += map.distance(points[i-1], points[i]);
+            }
+            return total;
+        }
+
+        function clearMeasure(){
+            measurePoints = [];
+            measureLayer.clearLayers();
+            if(measureLine){ map.removeLayer(measureLine); measureLine = null; }
+            if(tempLine){ map.removeLayer(tempLine); tempLine = null; }
+            if(measurePolygon){ map.removeLayer(measurePolygon); measurePolygon = null; }
+            map.closeTooltip(measureTooltip);
+            hideHint();
+        }
+
+        function setMeasure(active){
+            // sempre manter a trena por cima
+            ecomapBringMeasureToFront();
+            measureActive = active;
+
+            // visual state
+            if(measureBtn){
+                if(active) measureBtn.classList.add('is-active');
+                else measureBtn.classList.remove('is-active');
+            }
+
+            if(active){
+                map.getContainer().style.cursor = 'crosshair';
+                map.doubleClickZoom.disable();
+                showHint('<b>EcoMap – Medição</b><br>• Clique para marcar pontos<br>• Duplo-clique para finalizar<br>• Botão 🗑 para limpar<br><span style="opacity:.9">Dica: ESC cancela</span>');
+            }else{
+                map.getContainer().style.cursor = '';
+                map.doubleClickZoom.enable();
+                if(tempLine){ map.removeLayer(tempLine); tempLine = null; }
+                map.closeTooltip(measureTooltip);
+            }
+        }
+
+        // Control: Trena EcoMap (colapsável: Trena + 🗑)
+        var measureBtn = null;
+        var measureGroup = null;
+
+        function setMeasureGroupOpen(open){
+            if(!measureGroup) return;
+            if(open) measureGroup.classList.add('is-open');
+            else measureGroup.classList.remove('is-open');
+        }
+
+        var MeasureControl = L.Control.extend({
+            options: { position: 'topleft' },
+            onAdd: function(){
+                var container = L.DomUtil.create('div', 'leaflet-bar ecomap-controls ecomap-group');
+                container.classList.add('ecomap-measure');
+                measureGroup = container;
+
+                // botão principal (Trena)
+                var aMain = L.DomUtil.create('a', '', container);
+                aMain.href = '#';
+                aMain.title = 'Trena (medir distância/área)';
+                aMain.innerHTML = '<i class="fas fa-ruler"></i>';
+                measureBtn = aMain;
+
+                // sub-itens (aparecem quando expandido)
+                var sub = L.DomUtil.create('div', 'ecomap-sub', container);
+                var aTrash = L.DomUtil.create('a', '', sub);
+                aTrash.href = '#';
+                aTrash.title = 'Limpar medições';
+                aTrash.innerHTML = '<i class="fas fa-trash-alt"></i>';
+
+                // inicia COLAPSADO
+                setMeasureGroupOpen(false);
+
+                L.DomEvent.disableClickPropagation(container);
+
+                L.DomEvent.on(aMain, 'click', function(e){
+                    L.DomEvent.preventDefault(e);
+                    // Ao ativar a trena, expande; ao desativar, colapsa
+                    var next = !measureActive;
+                    setMeasure(next);
+                    setMeasureGroupOpen(next);
+                });
+
+                L.DomEvent.on(aTrash, 'click', function(e){
+                    L.DomEvent.preventDefault(e);
+                    clearMeasure();
+                    if(measureActive){
+                        showHint('<b>EcoMap – Medição</b><br>• Clique para marcar pontos<br>• Duplo-clique para finalizar<br>• Botão 🗑 para limpar<br><span style="opacity:.9">Dica: ESC cancela</span>');
+                    }
+                });
+
+                return container;
+            }
+        });
+
+        map.addControl(new MeasureControl());
+
+        // Interações do mapa (trena)
+        function onMapClick(e){
+            if(!measureActive) return;
+
+            var p = e.latlng;
+            measurePoints.push(p);
+
+            // marker do ponto
+            L.circleMarker(p, {
+                pane: 'pane_EcoMapMeasure',
+                renderer: ecomapMeasureRenderer,
+                radius: 5,
+                weight: 2,
+                color: '#111',
+                fillColor: '#fff',
+                fillOpacity: 1
+            }).addTo(measureLayer);
+
+            // Polígono (para área)
+            if(measurePolygon){
+                measurePolygon.addLatLng(p);
+                measurePolygon.setStyle({ color:'#000', weight:3, opacity:1 });
+            }else{
+                measurePolygon = L.polygon([p], { pane: 'pane_EcoMapMeasure', renderer: ecomapMeasureRenderer, color:'#000', weight:3, opacity:1, fillColor:'#111', fillOpacity:0.12 }).addTo(measureLayer);
+            }
+
+            // Linha (para perímetro)
+            if(measureLine){
+                measureLine.addLatLng(p);
+            }else{
+                measureLine = L.polyline([p], { pane: 'pane_EcoMapMeasure', renderer: ecomapMeasureRenderer, color:'#111', weight:3, opacity:0.9 }).addTo(measureLayer);
+            }
+
+            var total = computeTotalDistance(measurePoints);
+            var perimetro = total;
+            var areaTxt = '';
+            if(measurePoints.length >= 3){
+                var area = 0;
+                try{ area = geodesicArea(measurePoints); }catch(err){ area = 0; }
+                areaTxt = '<br><span style="font-weight:700">Área: ' + formatArea(area) + '</span>';
+            }
+            measureTooltip.setLatLng(p).setContent('Distância Total: ' + formatDistance(perimetro) + areaTxt);
+            map.openTooltip(measureTooltip);
+
+            if(tempLine){ map.removeLayer(tempLine); tempLine = null; }
+        }
+
+        function onMapMove(e){
+            if(!measureActive) return;
+            if(measurePoints.length === 0) return;
+
+            var last = measurePoints[measurePoints.length-1];
+            var cur = e.latlng;
+
+            if(!tempLine){
+                tempLine = L.polyline([last, cur], { pane: 'pane_EcoMapMeasure', renderer: ecomapMeasureRenderer, color:'#111', weight:2, opacity:0.45, dashArray:'6,6' }).addTo(measureLayer);
+            }else{
+                tempLine.setLatLngs([last, cur]);
+            }
+
+            var total = computeTotalDistance(measurePoints);
+            var segment = map.distance(last, cur);
+            var perimetro = total + segment;
+
+            var areaTxt = '';
+            if(measurePoints.length >= 2){
+                var area = 0;
+                try{
+                    var pts = measurePoints.concat([cur]);
+                    if(pts.length >= 3){
+                        area = geodesicArea(pts);
+                        areaTxt = '<br><span style="font-weight:700">Área: ' + formatArea(area) + '</span>';
+                    }
+                }catch(err){ area = 0; }
+            }
+
+            measureTooltip
+              .setLatLng(cur)
+              .setContent(
+                'Distância Total: ' + formatDistance(perimetro) +
+                '<br><span style="font-weight:600;opacity:.9">Trecho: ' + formatDistance(segment) + '</span>' +
+                areaTxt
+              );
+            map.openTooltip(measureTooltip);
+        }
+
+        function onMapDblClick(e){
+            if(!measureActive) return;
+            setMeasure(false);
+
+            if(measurePoints.length >= 2){
+                var perimetro = computeTotalDistance(measurePoints);
+                var msg = '<b>Medição finalizada</b><br>Distância Total: ' + formatDistance(perimetro);
+                if(measurePoints.length >= 3){
+                    var area = 0;
+                    try{ area = geodesicArea(measurePoints); }catch(err){ area = 0; }
+                    msg += '<br>Área: ' + formatArea(area);
+                }
+                msg += '<br>Use 🗑 para limpar ou ative a régua para medir novamente.';
+                showHint(msg);
+            }else{
+                hideHint();
+            }
+        }
+
+        function onKeyDown(e){
+            if(!measureActive) return;
+            if(e.key === 'Escape'){
+                clearMeasure();
+                setMeasure(false);
+            }
+        }
+
+        // ===== Eventos da Trena EcoMap (robustos, funcionam mesmo com camadas vetoriais ativas) =====
+// Observação: cliques em vetores (paths) muitas vezes NÃO disparam map.click. Por isso, usamos listeners no DOM do container
+// em modo capture e convertemos para latlng via map.mouseEventToLatLng().
+
+function isFromControl(ev){
+    try{
+        return !!(ev.target && ev.target.closest && ev.target.closest('.leaflet-control, .leaflet-control-container'));
+    }catch(e){ return false; }
+}
+
+function onDomClick(ev){
+    if(!measureActive) return;
+    if(isFromControl(ev)) return;
+
+    // impede popups/handlers das layers quando estiver medindo
+    ev.preventDefault();
+    ev.stopPropagation();
+
+    var latlng = map.mouseEventToLatLng(ev);
+    onMapClick({ latlng: latlng });
+}
+
+function onDomMove(ev){
+    if(!measureActive) return;
+    if(isFromControl(ev)) return;
+
+    var latlng = map.mouseEventToLatLng(ev);
+    onMapMove({ latlng: latlng });
+}
+
+function onDomDblClick(ev){
+    if(!measureActive) return;
+    if(isFromControl(ev)) return;
+
+    ev.preventDefault();
+    ev.stopPropagation();
+
+    var latlng = map.mouseEventToLatLng(ev);
+    onMapDblClick({ latlng: latlng });
+}
+
+var mapContainer = map.getContainer();
+mapContainer.addEventListener('click', onDomClick, true);      // capture=true
+mapContainer.addEventListener('mousemove', onDomMove, true);   // capture=true
+mapContainer.addEventListener('dblclick', onDomDblClick, true);// capture=true
+
+document.addEventListener('keydown', onKeyDown);
+
+// ===== Desativar popups de camadas vetoriais (sempre) =====
+function disableAllVectorPopups(){
+    function killPopupOnLayer(l){
+        if(!l) return;
+        try{
+            if(typeof l.closePopup === 'function') l.closePopup();
+            if(typeof l.unbindPopup === 'function') l.unbindPopup();
+            // remove handler de click (qgis2web usa click para abrir popup)
+            if(typeof l.off === 'function'){
+                try{ l.off('click'); }catch(e){}
+                try{ l.off('popupopen'); }catch(e){}
+            }
+        }catch(e){}
+    }
+
+    try{
+        map.eachLayer(function(lyr){
+            killPopupOnLayer(lyr);
+
+            // sublayers (geojson/feature groups)
+            if(lyr && typeof lyr.eachLayer === 'function'){
+                try{
+                    lyr.eachLayer(function(sl){
+                        killPopupOnLayer(sl);
+                        // alguns geojson tem sub-sub-layers
+                        if(sl && typeof sl.eachLayer === 'function'){
+                            try{ sl.eachLayer(killPopupOnLayer); }catch(e){}
+                        }
+                    });
+                }catch(e){}
+            }
+        });
+    }catch(e){}
+}
+
+// executa agora e também sempre que ligar/desligar overlays (qgis2web pode recriar handlers)
+disableAllVectorPopups();
+map.on('overlayadd', disableAllVectorPopups);
+map.on('overlayremove', disableAllVectorPopups);
+
+// Se algum popup escapar, fecha imediatamente
+map.on('popupopen', function(e){ try{ map.closePopup(e.popup); }catch(err){} });
+
+// Se o usuário ligar/desligar camadas (ex.: ortomosaicos), mantém a trena por cima
+map.on('overlayadd', ecomapBringMeasureToFront);
+map.on('overlayremove', ecomapBringMeasureToFront);
+map.on('layeradd', function(e){
+    // quando entra um imageOverlay novo, reimpõe z-index e traz paths da trena à frente
+    ecomapBringMeasureToFront();
+    disableAllVectorPopups();
+});
+
+        // (Leaflet-measure padrão desativado: substituído por trena EcoMap)
+
+
+
+/* ===== Anotações EcoMap (desenhar + exportar GeoJSON) =====
+   - Sem servidor: o cliente desenha e exporta um .geojson para enviar à EcoMap
+   - Observações ficam dentro das propriedades (note, created_at, updated_at)
+*/
+map.createPane('pane_EcoMapNotes');
+map.getPane('pane_EcoMapNotes').style.zIndex = 99990;
+map.getPane('pane_EcoMapNotes').style.pointerEvents = 'auto';
+
+var notesLayer = new L.FeatureGroup([], { pane: 'pane_EcoMapNotes' });
+map.addLayer(notesLayer);
+
+// ===== EcoMap - Controle de interatividade (para desenhar em cima de feições existentes) =====
+var notesDrawActive = false;
+var notesEditActive = false;
+function setNotesPanePointerEvents(enabled){
+  try{
+    var pane = map.getPane('pane_EcoMapNotes');
+    if(pane) pane.style.pointerEvents = enabled ? 'auto' : 'none';
+  }catch(e){}
+}
+
+function setNotesInteractivity(enabled){
+  try{
+    if(!notesLayer || !notesLayer.eachLayer) return;
+    notesLayer.eachLayer(function(l){
+      try {
+        if (l instanceof L.Path){
+          l.options.interactive = enabled;
+          if (l._path) l._path.style.pointerEvents = enabled ? 'auto' : 'none';
+        } else if (l instanceof L.Marker){
+          if (l._icon) l._icon.style.pointerEvents = enabled ? 'auto' : 'none';
+          if (l._shadow) l._shadow.style.pointerEvents = enabled ? 'auto' : 'none';
+        }
+      } catch(e) {}
+    });
+  }catch(e){}
+}
+
+// ===== EcoMap - Tabela flutuante =====
+(function(){
+  var panel = document.createElement('div');
+  panel.id = 'ecomapNotesTablePanel';
+  panel.innerHTML = '<h4>Tabela de Anotações</h4><div class="small">As feições desenhadas aparecem aqui.</div><div id="ecomapNotesTableWrap" style="margin-top:8px;"></div>';
+  document.body.appendChild(panel);
+})();
+
+function fmtMeters(m){
+  if (!isFinite(m)) return '-';
+  return (m >= 1000) ? (m/1000).toFixed(2).replace('.',',') + ' km' : m.toFixed(2).replace('.',',') + ' m';
+}
+function fmtArea(a){
+  if (!isFinite(a)) return '-';
+  return (a/10000).toFixed(4).replace('.',',') + ' ha';
+}
+function lineLength(latlngs){
+  var sum = 0;
+  for (var i=1;i<latlngs.length;i++){ sum += map.distance(latlngs[i-1], latlngs[i]); }
+  return sum;
+}
+function polygonPerimeter(latlngs){
+  if (latlngs.length < 2) return 0;
+  var sum = lineLength(latlngs);
+  sum += map.distance(latlngs[latlngs.length-1], latlngs[0]);
+  return sum;
+}
+function polygonArea(latlngs){
+  try {
+    if (L.GeometryUtil && typeof L.GeometryUtil.geodesicArea === 'function'){
+      return Math.abs(L.GeometryUtil.geodesicArea(latlngs));
+    }
+  } catch(e) {}
+  return NaN;
+}
+
+// ===== EcoMap: controle de exibição da tabela (mobile) =====
+var notesTableVisible = !window.matchMedia('(max-width: 768px)').matches; // desktop: aberta; mobile: recolhida por padrão
+function toggleNotesTableVisible(){
+  notesTableVisible = !notesTableVisible;
+  try{ refreshNotesTable(); }catch(e){}
+}
+
+
+function toDMS(deg, isLat){
+  // Converte graus decimais para DMS, sem casas decimais nos segundos
+  var hemi = isLat ? (deg < 0 ? 'S' : 'N') : (deg < 0 ? 'W' : 'E');
+  var abs = Math.abs(deg);
+  var d = Math.floor(abs);
+  var minFloat = (abs - d) * 60;
+  var m = Math.floor(minFloat);
+  var secFloat = (minFloat - m) * 60;
+  var s = Math.round(secFloat);
+
+  // normaliza arredondamentos (ex.: 59.9 -> 60)
+  if(s === 60){ s = 0; m += 1; }
+  if(m === 60){ m = 0; d += 1; }
+
+  return d + '°' + String(m).padStart(2,'0') + "'" + String(s).padStart(2,'0') + '"' + hemi;
+}
+
+
+function refreshNotesTable(){
+  var panel = document.getElementById('ecomapNotesTablePanel');
+  var wrap = document.getElementById('ecomapNotesTableWrap');
+  if (!panel || !wrap) return;
+
+  
+  var tableBtn = window._ecomapNotesTableBtn || null;
+  if (tableBtn){ tableBtn.style.display = 'none'; }
+// se as ferramentas de anotação estiverem recolhidas, a tabela deve ficar oculta
+  if (!notesToolsOpen){
+    panel.style.display = 'none';
+    return;
+  }
+
+  var rows = [];
+  notesLayer.eachLayer(function(l){
+    var type = (l instanceof L.Marker) ? 'Ponto' : (l instanceof L.Polygon && !(l instanceof L.Rectangle) ? 'Polígono' : (l instanceof L.Polyline ? 'Linha' : 'Feição'));
+    var name = (l.feature && l.feature.properties && (l.feature.properties.note || l.feature.properties.name)) ? (l.feature.properties.note || l.feature.properties.name) : '(sem nome)';
+    var metric = '-';
+    if (l instanceof L.Marker){
+      var pt = l.getLatLng ? l.getLatLng() : null;
+      if(pt){
+        metric = 'Lat: ' + toDMS(pt.lat, true) + ' | Lon: ' + toDMS(pt.lng, false);
+      }
+    }
+    if (l instanceof L.Polyline && !(l instanceof L.Polygon)){
+      var ll = l.getLatLngs();
+      metric = fmtMeters(lineLength(ll));
+    } else if (l instanceof L.Polygon){
+      var ring = l.getLatLngs();
+      ring = Array.isArray(ring) && Array.isArray(ring[0]) ? ring[0] : ring;
+      var a = polygonArea(ring);
+      var p = polygonPerimeter(ring);
+      metric = fmtArea(a) + ' | ' + fmtMeters(p);
+    }
+    rows.push({name:name, type:type, metric:metric});
+  });
+
+  if (rows.length === 0){
+    panel.style.display = 'none';
+    wrap.innerHTML = '';
+    if (tableBtn){ tableBtn.style.display = 'none'; }
+    return;
+  }
+
+  // há feições: habilita botão da tabela (no mobile)
+  if (tableBtn){ tableBtn.style.display = ''; }
+
+  // respeitar o estado recolhida/aberta (desktop + mobile)
+  if (!notesTableVisible){
+    panel.style.display = 'none';
+    return;
+  }
+
+  var html = '<table><thead><tr><th>Nome</th><th>Tipo</th><th>Medições</th></tr></thead><tbody>';
+  rows.forEach(function(r){
+    html += '<tr><td>'+String(r.name).replace(/</g,'&lt;')+'</td><td>'+r.type+'</td><td>'+r.metric+'</td></tr>';
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+  panel.style.display = 'block';
+}
+
+
+// Estilos (Leaflet.draw usa shapeOptions)
+var notesShapeOptions = {
+    pane: 'pane_EcoMapNotes',
+    color: '#111',
+    weight: 3,
+    opacity: 0.5,
+    fillColor: '#111',
+    fillOpacity: 0.12
+};
+
+// Opções usadas DURANTE o desenho: tornam o traço temporário não-interativo,
+// evitando que ele “capture” o clique (problema do vértice inside em zoom baixo).
+var notesShapeOptionsDraw = (function(){
+  var o = {};
+  for (var k in notesShapeOptions) o[k] = notesShapeOptions[k];
+  o.interactive = false;
+  return o;
+})();
+
+function setNotesLayerInteractive(layer, interactive){
+  try{
+    layer.options = layer.options || {};
+    layer.options.interactive = !!interactive;
+    if (layer._path){
+      if (interactive){
+        L.DomUtil.addClass(layer._path, 'leaflet-interactive');
+        try{ layer._path.style.pointerEvents = 'auto'; }catch(e){}
+      } else {
+        L.DomUtil.removeClass(layer._path, 'leaflet-interactive');
+        try{ layer._path.style.pointerEvents = 'none'; }catch(e){}
+      }
+    }
+  }catch(e){}
+}
+
+
+function nowISO(){
+    try{ return new Date().toISOString(); }catch(e){ return ''; }
+}
+
+  function bindNoteInteractions(layer){
+    // Tooltip (nome/observação)
+    try {
+      var p = layer && layer.feature && layer.feature.properties ? layer.feature.properties : null;
+      var note = p && (p.note || p.name) ? (p.note || p.name) : '';
+      if (note && layer.bindTooltip){
+        layer.bindTooltip(String(note), {sticky:true, direction:'top', opacity:0.9});
+      }
+    } catch(e) {}
+
+    layer.on('click', function(e){
+      // durante desenho/edição não capturar cliques
+      if (notesDrawActive || notesEditActive) return;
+      // editar nome/observação
+      var current = (layer.feature && layer.feature.properties && (layer.feature.properties.note || layer.feature.properties.name)) || '';
+      var val = prompt('Nome/Observação da feição:', current);
+      if (val === null) return;
+      layer.feature = layer.feature || {type:'Feature', properties:{}};
+      layer.feature.properties = layer.feature.properties || {};
+      layer.feature.properties.note = val;
+      try { if (layer.setTooltipContent) layer.setTooltipContent(String(val)); } catch(e) {}
+      refreshNotesTable();
+    });
+  }
+
+function ensureFeatureMeta(layer){
+    if(!layer.feature) layer.feature = { type:'Feature', properties:{} };
+    if(!layer.feature.properties) layer.feature.properties = {};
+    if(!layer.feature.properties.created_at) layer.feature.properties.created_at = nowISO();
+    if(!layer.feature.properties.updated_at) layer.feature.properties.updated_at = nowISO();
+}
+
+// Handlers (Leaflet.draw)
+var notesVertexIcon = new L.DivIcon({
+    className: 'notes-vertex-icon',
+    iconSize: [8, 8]
+});
+var drawMarker = new L.Draw.Marker(map, { repeatMode:false });
+var drawPolyline = new L.Draw.Polyline(map, { shapeOptions: notesShapeOptionsDraw, repeatMode:false, icon: notesVertexIcon, touchIcon: notesVertexIcon });
+var drawPolygon = new L.Draw.Polygon(map, { shapeOptions: notesShapeOptionsDraw, repeatMode:false, allowIntersection:false, showArea:true, icon: notesVertexIcon, touchIcon: notesVertexIcon });
+
+// ===== EcoMap: Finalização somente por botão (linha/polígono) - desktop + mobile =====
+var _ecomapFinishBarEl = null;
+var _ecomapPrevDblZoomEnabled = null;
+var _ecomapDblBlocker = function(e){ try{ L.DomEvent.stop(e); }catch(err){} };
+
+function showFinishBar(show){
+  try{
+    if(!_ecomapFinishBarEl) _ecomapFinishBarEl = document.getElementById('ecomapFinishBar');
+    if(!_ecomapFinishBarEl) return;
+    _ecomapFinishBarEl.style.display = show ? 'flex' : 'none';
+    _ecomapFinishBarEl.setAttribute('aria-hidden', show ? 'false' : 'true');
+  }catch(e){}
+}
+
+function _ecomapGetActiveDrawHandler(){
+  try{
+    if(notesMode === 'polyline' && drawPolyline && drawPolyline.enabled && drawPolyline.enabled()) return drawPolyline;
+    if(notesMode === 'polygon' && drawPolygon && drawPolygon.enabled && drawPolygon.enabled()) return drawPolygon;
+  }catch(e){}
+  return null;
+}
+
+(function(){
+  // força Leaflet.draw a não finalizar por duplo-clique
+  try{ if(drawPolyline && drawPolyline.options) drawPolyline.options.finishOnDoubleClick = false; }catch(e){}
+  try{ if(drawPolygon && drawPolygon.options) drawPolygon.options.finishOnDoubleClick = false; }catch(e){}
+
+  function gateFinish(handler){
+    if(!handler || handler.__ecomapFinishGated) return;
+    handler.__ecomapFinishGated = true;
+    var origFinish = handler._finishShape;
+    if(typeof origFinish !== 'function') return;
+
+    handler._finishShape = function(){
+      if(!this._ecomapAllowFinish){
+        return; // bloqueia qualquer finalização por gesto/clique
+      }
+      return origFinish.apply(this, arguments);
+    };
+  }
+
+  gateFinish(drawPolyline);
+  gateFinish(drawPolygon);
+
+  function bindButtons(){
+    var btnFinish = document.getElementById('ecomapBtnFinish');
+    var btnCancel = document.getElementById('ecomapBtnCancel');
+    if(!btnFinish || !btnCancel) return;
+
+    btnFinish.addEventListener('click', function(){
+      var h = _ecomapGetActiveDrawHandler();
+      if(!h) return;
+      try{
+        h._ecomapAllowFinish = true;
+        if(typeof h._finishShape === 'function') h._finishShape();
+      }catch(e){}
+      try{ h._ecomapAllowFinish = false; }catch(e){}
+    });
+
+    btnCancel.addEventListener('click', function(){
+      var h = _ecomapGetActiveDrawHandler();
+      try{ if(h) h.disable(); }catch(e){}
+      try{ stopAllNoteModes && stopAllNoteModes(); }catch(e){}
+      showFinishBar(false);
+    });
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindButtons);
+  else bindButtons();
+})();
+
+var editToolbar = new L.EditToolbar.Edit(map, { featureGroup: notesLayer });
+var notesMode = null; // 'marker' | 'polyline' | 'polygon' | 'edit' | null
+
+function stopAllNoteModes(){
+    try{ drawMarker.disable(); }catch(e){}
+    try{ drawPolyline.disable(); }catch(e){}
+    try{ drawPolygon.disable(); }catch(e){}
+    try{ editToolbar.disable(); }catch(e){}
+
+    notesMode = null;
+
+    // estado visual
+    if(notesBtns && notesBtns.length){
+        notesBtns.forEach(function(b){ b.classList.remove('is-active'); });
+    }
+
+    // garante que cliques voltem a funcionar ao sair de qualquer modo
+    try{ setNotesInteractivity(true); }catch(e){}
+    try{ setNotesPanePointerEvents(true); }catch(e){}
+}
+
+function setNotesMode(mode){
+    // se estiver medindo, desliga a trena para não conflitar com cliques
+    try{ if(typeof setMeasure === 'function' && measureActive) setMeasure(false); }catch(e){}
+
+    stopAllNoteModes();
+    notesMode = mode;
+
+    if(mode === 'marker'){ try{ drawMarker.enable(); }catch(e){} }
+    else if(mode === 'polyline'){ try{ drawPolyline.enable(); }catch(e){} }
+    else if(mode === 'polygon'){ try{ drawPolygon.enable(); }catch(e){} }
+    else if(mode === 'edit'){ try{ editToolbar.enable(); }catch(e){} }
+
+    // dica
+    try{
+        if(mode === 'marker') showHint('<b>Anotações</b><br>• Clique para inserir um ponto<br>• Clique no ponto para escrever/editar observação<br>• Exportar para enviar à EcoMap');
+        else if(mode === 'polyline') showHint('<b>Anotações</b><br>• Clique para criar a linha<br>• Duplo-clique para finalizar<br>• Clique na feição para escrever/editar observação');
+        else if(mode === 'polygon') showHint('<b>Anotações</b><br>• Clique para criar o polígono<br>• Duplo-clique para finalizar<br>• Clique na feição para escrever/editar observação');
+        else if(mode === 'edit') showHint('<b>Anotações</b><br>• Arraste vértices para editar<br>• Clique em “Salvar” na barra do editor quando terminar');
+else hideHint();
+    }catch(e){}
+
+    // estado visual
+    if(notesBtnsByMode && notesBtnsByMode[mode]){
+        notesBtnsByMode[mode].classList.add('is-active');
+    }
+}
+
+// eventos Leaflet.draw
+  map.on('draw:drawstart', function(){
+    notesDrawActive = true;
+    // durante desenho, deixar cliques passarem através das feições existentes
+    setNotesInteractivity(false);
+    setNotesPanePointerEvents(false);
+
+    // EcoMap: durante desenho (linha/polígono), bloquear duplo-clique e mostrar barra Finalizar/Cancelar (desktop+mobile)
+    try{
+      _ecomapPrevDblZoomEnabled = map.doubleClickZoom && map.doubleClickZoom._enabled;
+      if(map.doubleClickZoom) map.doubleClickZoom.disable();
+    }catch(e){}
+    try{ map.on('dblclick', _ecomapDblBlocker); }catch(e){}
+    try{ showFinishBar(notesMode === 'polyline' || notesMode === 'polygon'); }catch(e){}
+  });
+  map.on('draw:drawstop', function(){
+    notesDrawActive = false;
+    setNotesInteractivity(true);
+    setNotesPanePointerEvents(true);
+
+    try{ map.off('dblclick', _ecomapDblBlocker); }catch(e){}
+    try{ if(_ecomapPrevDblZoomEnabled) map.doubleClickZoom.enable(); }catch(e){}
+    try{ showFinishBar(false); }catch(e){}
+  });
+map.on(L.Draw.Event.CREATED, function (e) {
+    try{
+        var layer = e.layer;
+
+        // metadados
+        ensureFeatureMeta(layer);
+
+        // pergunta observação
+        var txt = prompt('Observação:', '');
+        if(txt !== null){
+            layer.feature.properties.note = String(txt || '').trim();
+        }else{
+            layer.feature.properties.note = '';
+        }
+        layer.feature.properties.updated_at = nowISO();
+
+        // estilo extra para marker
+        if(e.layerType === 'marker'){
+            // nada especial; o default marker ok
+        }else{
+            try{ layer.setStyle && layer.setStyle(notesShapeOptions); }catch(err){}
+        }
+
+        setNotesLayerInteractive(layer, true);
+
+        notesLayer.addLayer(layer);
+    refreshNotesTable();
+        bindNoteInteractions(layer);
+    }catch(err){}
+});
+
+map.on('draw:edited', function (e) {
+    try{
+        e.layers.eachLayer(function(layer){
+            ensureFeatureMeta(layer);
+            layer.feature.properties.updated_at = nowISO();
+            bindNoteInteractions(layer);
+        });
+    }catch(err){}
+});
+
+// ===== Exportação GeoJSON =====
+function downloadTextFile(filename, textContent){
+    var blob = new Blob([textContent], {type: 'application/geo+json;charset=utf-8'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 800);
+}
+
+function exportNotesGeoJSON(){
+    try{
+        if(!notesLayer || notesLayer.getLayers().length === 0){
+            alert('Não há anotações para exportar.');
+            return;
+        }
+        var gj = notesLayer.toGeoJSON();
+        // garantia: incluir CRS não é padrão no GeoJSON moderno, então omitimos.
+        var txt = JSON.stringify(gj, null, 2);
+        var fname = 'anotacoes_santa_lucia_' + (new Date().toISOString().slice(0,10)) + '.geojson';
+        downloadTextFile(fname, txt);
+    }catch(e){
+        alert('Falha ao exportar anotações.');
+    }
+}
+
+function clearAllNotes(){
+    if(!notesLayer) return;
+    var ok = confirm('Apagar TODAS as anotações desta sessão?');
+    if(!ok) return;
+    notesLayer.clearLayers();
+    hideHint();
+}
+
+// ===== Controle UI (barra no topo esquerdo) =====
+var notesBtns = [];
+var notesBtnsByMode = {};
+var notesGroup = null;
+
+var notesToolsOpen = false; // controla exibição da tabela flutuante
+function setNotesGroupOpen(open){
+    if(!notesGroup) return;
+    notesToolsOpen = !!open;
+    if(open) notesGroup.classList.add('is-open');
+    else notesGroup.classList.remove('is-open');
+
+    // ao recolher, oculta a tabela flutuante imediatamente
+    var panel = document.getElementById('ecomapNotesTablePanel');
+    if(panel && !notesToolsOpen){
+        panel.style.display = 'none';
+    }
+}
+
+var NotesControl = L.Control.extend({
+    options: { position: 'topleft' },
+    onAdd: function(){
+        var container = L.DomUtil.create('div', 'leaflet-bar ecomap-notes-controls ecomap-group');
+        container.classList.add('ecomap-notes');
+        notesGroup = container;
+
+        // botão principal (imagem da pasta images)
+        var aMain = L.DomUtil.create('a', 'ecomap-notes-main', container);
+        aMain.href = '#';
+        aMain.title = 'Anotações (expandir / recolher)';
+        aMain.innerHTML = '<img src="images/icon-anotacoes.png" alt="Anotações" onerror="this.onerror=null;this.src=\'images/icon-anotacoes.svg\';" />';
+
+        // sub-itens (aparecem quando expandido)
+        var sub = L.DomUtil.create('div', 'ecomap-sub', container);
+
+        function mkBtn(title, iconHtml, onClick){
+            var a = L.DomUtil.create('a', '', sub);
+            a.href = '#';
+            a.title = title;
+            a.innerHTML = iconHtml;
+            L.DomEvent.on(a, 'click', function(ev){
+                L.DomEvent.preventDefault(ev);
+                onClick();
+            });
+            notesBtns.push(a);
+            return a;
+        }
+
+        var bPoly = mkBtn('Anotações: desenhar polígono', `<span class="ecomap-ico-poly" aria-hidden="true">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
+  <path d="M7 3 L3 9 L6 21 L18 20 L21 8 L14 3 Z"></path>
+  <circle cx="7" cy="3" r="1.2" fill="currentColor"></circle>
+  <circle cx="3" cy="9" r="1.2" fill="currentColor"></circle>
+  <circle cx="6" cy="21" r="1.2" fill="currentColor"></circle>
+  <circle cx="18" cy="20" r="1.2" fill="currentColor"></circle>
+  <circle cx="21" cy="8" r="1.2" fill="currentColor"></circle>
+  <circle cx="14" cy="3" r="1.2" fill="currentColor"></circle>
+</svg>
+</span>`, function(){
+            setNotesMode(notesMode === 'polygon' ? null : 'polygon');
+        });
+        notesBtnsByMode['polygon'] = bPoly;
+
+        var bLine = mkBtn('Anotações: desenhar linha', '<i class="fas fa-project-diagram"></i>', function(){
+            setNotesMode(notesMode === 'polyline' ? null : 'polyline');
+        });
+        notesBtnsByMode['polyline'] = bLine;
+
+        var bPt = mkBtn('Anotações: inserir ponto', '<i class="fas fa-map-marker-alt"></i>', function(){
+            setNotesMode(notesMode === 'marker' ? null : 'marker');
+        });
+        notesBtnsByMode['marker'] = bPt;
+
+        var bEdit = mkBtn('Anotações: editar geometria', '<i class="fas fa-edit"></i>', function(){
+            setNotesMode(notesMode === 'edit' ? null : 'edit');
+        });
+        notesBtnsByMode['edit'] = bEdit;
+        // NÃO mexer na funcionalidade do botão de download (export)
+        mkBtn('Anotações: exportar GeoJSON', '<i class="fas fa-download"></i>', function(){
+            stopAllNoteModes();
+            exportNotesGeoJSON();
+        });
+
+        mkBtn('Anotações: limpar tudo', '<i class="fas fa-trash-alt"></i>', function(){
+            stopAllNoteModes();
+            clearAllNotes();
+        });
+
+
+        // Botão da Tabela (somente mobile; aparece quando houver feições)
+        var bTable = mkBtn('Tabela de anotações (mostrar/ocultar)', '<i class="fas fa-table"></i>', function(){
+            toggleNotesTableVisible();
+        });
+        bTable.classList.add('ecomap-notes-tablebtn');
+        window._ecomapNotesTableBtn = bTable;
+
+        // inicia COLAPSADO
+        setNotesGroupOpen(false);
+
+        // clique no principal: expandir/recolher
+        L.DomEvent.on(aMain, 'click', function(ev){
+            L.DomEvent.preventDefault(ev);
+            var open = !container.classList.contains('is-open');
+            if(!open){
+                // ao recolher, para qualquer modo ativo (evita ficar "ligado" invisível)
+                try{ stopAllNoteModes(); }catch(e){}
+            }
+            setNotesGroupOpen(open);
+            // ao expandir, reexibe a tabela se houver feições
+            if(open){ try{ refreshNotesTable(); }catch(e){} }
+        });
+
+        L.DomEvent.disableClickPropagation(container);
+        return container;
+    }
+});
+
+map.addControl(new NotesControl());
+
+// Se a trena for ativada, desliga modos de anotação (evita conflito de clique)
+try{
+    var _origSetMeasure = setMeasure;
+    setMeasure = function(active){
+        if(active){ try{ stopAllNoteModes(); }catch(e){} }
+        return _origSetMeasure(active);
+    };
+}catch(e){}
+
+
+
+        
+
+        // (Leaflet-measure padrão desativado: substituído por trena EcoMap)
+        var bounds_group = new L.featureGroup([]);
+        function setBounds() {
+        }
+        map.createPane('pane_GoogleSatellite_0');
+        map.getPane('pane_GoogleSatellite_0').style.zIndex = 400;
+        var layer_GoogleSatellite_0 = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+            pane: 'pane_GoogleSatellite_0',
+            opacity: 1.0,
+            attribution: '<a href="https://www.google.at/permissions/geoguidelines/attr-guide.html">Map data ©2015 Google</a>',
+            minZoom: 1,
+            maxZoom: 28,
+            minNativeZoom: 0,
+            maxNativeZoom: 20
+        });
+        layer_GoogleSatellite_0;
+        map.addLayer(layer_GoogleSatellite_0);
+        map.createPane('pane_Orto_Segmentada_Rietta01_1');
+        map.getPane('pane_Orto_Segmentada_Rietta01_1').style.zIndex = 401;
+        var img_Orto_Segmentada_Rietta01_1 = 'data/Orto_Segmentada_Rietta01_1.png';
+        var img_bounds_Orto_Segmentada_Rietta01_1 = [[-27.60583036382593,-51.419395493861366],[-27.602568551807085,-51.41543109283801]];
+        var layer_Orto_Segmentada_Rietta01_1 = new L.imageOverlay(img_Orto_Segmentada_Rietta01_1,
+                                              img_bounds_Orto_Segmentada_Rietta01_1,
+                                              {pane: 'pane_Orto_Segmentada_Rietta01_1'});
+        bounds_group.addLayer(layer_Orto_Segmentada_Rietta01_1);
+        map.addLayer(layer_Orto_Segmentada_Rietta01_1);
+        map.createPane('pane_Orto_Segmentada_Rietta02_2');
+        map.getPane('pane_Orto_Segmentada_Rietta02_2').style.zIndex = 402;
+        var img_Orto_Segmentada_Rietta02_2 = 'data/Orto_Segmentada_Rietta02_2.png';
+        var img_bounds_Orto_Segmentada_Rietta02_2 = [[-27.6088861971668,-51.41940713010587],[-27.605818477807304,-51.415443349563056]];
+        var layer_Orto_Segmentada_Rietta02_2 = new L.imageOverlay(img_Orto_Segmentada_Rietta02_2,
+                                              img_bounds_Orto_Segmentada_Rietta02_2,
+                                              {pane: 'pane_Orto_Segmentada_Rietta02_2'});
+        bounds_group.addLayer(layer_Orto_Segmentada_Rietta02_2);
+        map.addLayer(layer_Orto_Segmentada_Rietta02_2);
+        map.createPane('pane_Orto_Segmentada_Rietta10_3');
+        map.getPane('pane_Orto_Segmentada_Rietta10_3').style.zIndex = 403;
+        var img_Orto_Segmentada_Rietta10_3 = 'data/Orto_Segmentada_Rietta10_3.png';
+        var img_bounds_Orto_Segmentada_Rietta10_3 = [[-27.602592208060276,-51.41543109283801],[-27.599330507029418,-51.41146692462082]];
+        var layer_Orto_Segmentada_Rietta10_3 = new L.imageOverlay(img_Orto_Segmentada_Rietta10_3,
+                                              img_bounds_Orto_Segmentada_Rietta10_3,
+                                              {pane: 'pane_Orto_Segmentada_Rietta10_3'});
+        bounds_group.addLayer(layer_Orto_Segmentada_Rietta10_3);
+        map.addLayer(layer_Orto_Segmentada_Rietta10_3);
+        map.createPane('pane_Orto_Segmentada_Rietta11_4');
+        map.getPane('pane_Orto_Segmentada_Rietta11_4').style.zIndex = 404;
+        var img_Orto_Segmentada_Rietta11_4 = 'data/Orto_Segmentada_Rietta11_4.png';
+        var img_bounds_Orto_Segmentada_Rietta11_4 = [[-27.605842137313786,-51.415443349563056],[-27.602580436191335,-51.41147906272152]];
+        var layer_Orto_Segmentada_Rietta11_4 = new L.imageOverlay(img_Orto_Segmentada_Rietta11_4,
+                                              img_bounds_Orto_Segmentada_Rietta11_4,
+                                              {pane: 'pane_Orto_Segmentada_Rietta11_4'});
+        bounds_group.addLayer(layer_Orto_Segmentada_Rietta11_4);
+        map.addLayer(layer_Orto_Segmentada_Rietta11_4);
+        map.createPane('pane_Orto_Segmentada_Rietta12_5');
+        map.getPane('pane_Orto_Segmentada_Rietta12_5').style.zIndex = 405;
+        var img_Orto_Segmentada_Rietta12_5 = 'data/Orto_Segmentada_Rietta12_5.png';
+        var img_bounds_Orto_Segmentada_Rietta12_5 = [[-27.608897972176955,-51.41545487616194],[-27.60583036382593,-51.41149120285538]];
+        var layer_Orto_Segmentada_Rietta12_5 = new L.imageOverlay(img_Orto_Segmentada_Rietta12_5,
+                                              img_bounds_Orto_Segmentada_Rietta12_5,
+                                              {pane: 'pane_Orto_Segmentada_Rietta12_5'});
+        bounds_group.addLayer(layer_Orto_Segmentada_Rietta12_5);
+        map.addLayer(layer_Orto_Segmentada_Rietta12_5);
+        map.createPane('pane_Orto_Segmentada_Rietta20_6');
+        map.getPane('pane_Orto_Segmentada_Rietta20_6').style.zIndex = 406;
+        var img_Orto_Segmentada_Rietta20_6 = 'data/Orto_Segmentada_Rietta20_6.png';
+        var img_bounds_Orto_Segmentada_Rietta20_6 = [[-27.60260386741366,-51.41147906272152],[-27.599342277279547,-51.407515008690126]];
+        var layer_Orto_Segmentada_Rietta20_6 = new L.imageOverlay(img_Orto_Segmentada_Rietta20_6,
+                                              img_bounds_Orto_Segmentada_Rietta20_6,
+                                              {pane: 'pane_Orto_Segmentada_Rietta20_6'});
+        bounds_group.addLayer(layer_Orto_Segmentada_Rietta20_6);
+        map.addLayer(layer_Orto_Segmentada_Rietta20_6);
+        map.createPane('pane_Orto_Segmentada_Rietta21_7');
+        map.getPane('pane_Orto_Segmentada_Rietta21_7').style.zIndex = 407;
+        var img_Orto_Segmentada_Rietta21_7 = 'data/Orto_Segmentada_Rietta21_7.png';
+        var img_bounds_Orto_Segmentada_Rietta21_7 = [[-27.605853798270594,-51.41149120285538],[-27.602592208060276,-51.40752703021888]];
+        var layer_Orto_Segmentada_Rietta21_7 = new L.imageOverlay(img_Orto_Segmentada_Rietta21_7,
+                                              img_bounds_Orto_Segmentada_Rietta21_7,
+                                              {pane: 'pane_Orto_Segmentada_Rietta21_7'});
+        bounds_group.addLayer(layer_Orto_Segmentada_Rietta21_7);
+        map.addLayer(layer_Orto_Segmentada_Rietta21_7);
+        map.createPane('pane_Orto_Segmentada_Rietta22_8');
+        map.getPane('pane_Orto_Segmentada_Rietta22_8').style.zIndex = 408;
+        var img_Orto_Segmentada_Rietta22_8 = 'data/Orto_Segmentada_Rietta22_8.png';
+        var img_bounds_Orto_Segmentada_Rietta22_8 = [[-27.608909634641524,-51.41150261980836],[-27.605842137313786,-51.40753905376127]];
+        var layer_Orto_Segmentada_Rietta22_8 = new L.imageOverlay(img_Orto_Segmentada_Rietta22_8,
+                                              img_bounds_Orto_Segmentada_Rietta22_8,
+                                              {pane: 'pane_Orto_Segmentada_Rietta22_8'});
+        bounds_group.addLayer(layer_Orto_Segmentada_Rietta22_8);
+        map.addLayer(layer_Orto_Segmentada_Rietta22_8);
+        map.createPane('pane_Orto_Segmentada_Rietta30_9');
+        map.getPane('pane_Orto_Segmentada_Rietta30_9').style.zIndex = 409;
+        var img_Orto_Segmentada_Rietta30_9 = 'data/Orto_Segmentada_Rietta30_9.png';
+        var img_bounds_Orto_Segmentada_Rietta30_9 = [[-27.60261489853501,-51.40752703021888],[-27.599353935029583,-51.40374042011385]];
+        var layer_Orto_Segmentada_Rietta30_9 = new L.imageOverlay(img_Orto_Segmentada_Rietta30_9,
+                                              img_bounds_Orto_Segmentada_Rietta30_9,
+                                              {pane: 'pane_Orto_Segmentada_Rietta30_9'});
+        bounds_group.addLayer(layer_Orto_Segmentada_Rietta30_9);
+        map.addLayer(layer_Orto_Segmentada_Rietta30_9);
+        map.createPane('pane_Orto_Segmentada_Rietta31_10');
+        map.getPane('pane_Orto_Segmentada_Rietta31_10').style.zIndex = 410;
+        var img_Orto_Segmentada_Rietta31_10 = 'data/Orto_Segmentada_Rietta31_10.png';
+        var img_bounds_Orto_Segmentada_Rietta31_10 = [[-27.60586483090898,-51.40753905376127],[-27.60260386741366,-51.40375233030116]];
+        var layer_Orto_Segmentada_Rietta31_10 = new L.imageOverlay(img_Orto_Segmentada_Rietta31_10,
+                                              img_bounds_Orto_Segmentada_Rietta31_10,
+                                              {pane: 'pane_Orto_Segmentada_Rietta31_10'});
+        bounds_group.addLayer(layer_Orto_Segmentada_Rietta31_10);
+        map.addLayer(layer_Orto_Segmentada_Rietta31_10);
+        function pop_CursoDgua_11(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['fid'] !== null ? autolinker.link(String(feature.properties['fid']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_CursoDgua_11_0() {
+            return {
+                pane: 'pane_CursoDgua_11',
+                opacity: 0.5,
+                color: 'rgba(8,28,244,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 2.0,
+                fillOpacity: 0,
+                interactive: false,
+            }
+        }
+        map.createPane('pane_CursoDgua_11');
+        map.getPane('pane_CursoDgua_11').style.zIndex = 411;
+        map.getPane('pane_CursoDgua_11').style['mix-blend-mode'] = 'normal';
+        var layer_CursoDgua_11 = new L.geoJson(json_CursoDgua_11, {
+            attribution: '',
+            interactive: false,
+            dataVar: 'json_CursoDgua_11',
+            layerName: 'layer_CursoDgua_11',
+            pane: 'pane_CursoDgua_11',
+            onEachFeature: pop_CursoDgua_11,
+            style: style_CursoDgua_11_0,
+        });
+        bounds_group.addLayer(layer_CursoDgua_11);
+        function pop_APP_12(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['fid'] !== null ? autolinker.link(String(feature.properties['fid']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['area_ha'] !== null ? autolinker.link(String(feature.properties['area_ha']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_APP_12_0() {
+            return {
+                pane: 'pane_APP_12',
+                opacity: 0.5,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 0.5,
+                fillColor: 'rgba(165,191,221,1.0)',
+                interactive: false,
+            }
+        }
+        map.createPane('pane_APP_12');
+        map.getPane('pane_APP_12').style.zIndex = 412;
+        map.getPane('pane_APP_12').style['mix-blend-mode'] = 'normal';
+        var layer_APP_12 = new L.geoJson(json_APP_12, {
+            attribution: '',
+            interactive: false,
+            dataVar: 'json_APP_12',
+            layerName: 'layer_APP_12',
+            pane: 'pane_APP_12',
+            onEachFeature: pop_APP_12,
+            style: style_APP_12_0,
+        });
+        bounds_group.addLayer(layer_APP_12);
+        function pop_Vegetao_13(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['fid'] !== null ? autolinker.link(String(feature.properties['fid']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['area_ha'] !== null ? autolinker.link(String(feature.properties['area_ha']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_Vegetao_13_0() {
+            return {
+                pane: 'pane_Vegetao_13',
+                opacity: 0.5,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 0.5,
+                fillColor: 'rgba(152,78,163,1.0)',
+                interactive: false,
+            }
+        }
+        map.createPane('pane_Vegetao_13');
+        map.getPane('pane_Vegetao_13').style.zIndex = 413;
+        map.getPane('pane_Vegetao_13').style['mix-blend-mode'] = 'normal';
+        var layer_Vegetao_13 = new L.geoJson(json_Vegetao_13, {
+            attribution: '',
+            interactive: false,
+            dataVar: 'json_Vegetao_13',
+            layerName: 'layer_Vegetao_13',
+            pane: 'pane_Vegetao_13',
+            onEachFeature: pop_Vegetao_13,
+            style: style_Vegetao_13_0,
+        });
+        bounds_group.addLayer(layer_Vegetao_13);
+        function pop_FaixadeServido_14(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['fid'] !== null ? autolinker.link(String(feature.properties['fid']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Matricula'] !== null ? autolinker.link(String(feature.properties['Matricula']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['area_ha'] !== null ? autolinker.link(String(feature.properties['area_ha']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_FaixadeServido_14_0() {
+            return {
+                pane: 'pane_FaixadeServido_14',
+                opacity: 0.5,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 0.5,
+                fillColor: 'rgba(228,26,28,1.0)',
+                interactive: false,
+            }
+        }
+        map.createPane('pane_FaixadeServido_14');
+        map.getPane('pane_FaixadeServido_14').style.zIndex = 414;
+        map.getPane('pane_FaixadeServido_14').style['mix-blend-mode'] = 'normal';
+        var layer_FaixadeServido_14 = new L.geoJson(json_FaixadeServido_14, {
+            attribution: '',
+            interactive: false,
+            dataVar: 'json_FaixadeServido_14',
+            layerName: 'layer_FaixadeServido_14',
+            pane: 'pane_FaixadeServido_14',
+            onEachFeature: pop_FaixadeServido_14,
+            style: style_FaixadeServido_14_0,
+        });
+        bounds_group.addLayer(layer_FaixadeServido_14);
+        function pop_Estrada_15(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['fid'] !== null ? autolinker.link(String(feature.properties['fid']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Matricula'] !== null ? autolinker.link(String(feature.properties['Matricula']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['area_ha'] !== null ? autolinker.link(String(feature.properties['area_ha']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_Estrada_15_0() {
+            return {
+                pane: 'pane_Estrada_15',
+                opacity: 0.5,
+                color: 'rgba(82,82,82,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 0.5,
+                fillColor: 'rgba(204,204,204,1.0)',
+                interactive: false,
+            }
+        }
+        map.createPane('pane_Estrada_15');
+        map.getPane('pane_Estrada_15').style.zIndex = 415;
+        map.getPane('pane_Estrada_15').style['mix-blend-mode'] = 'normal';
+        var layer_Estrada_15 = new L.geoJson(json_Estrada_15, {
+            attribution: '',
+            interactive: false,
+            dataVar: 'json_Estrada_15',
+            layerName: 'layer_Estrada_15',
+            pane: 'pane_Estrada_15',
+            onEachFeature: pop_Estrada_15,
+            style: style_Estrada_15_0,
+        });
+        bounds_group.addLayer(layer_Estrada_15);
+        function pop_Eucalipto_16(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['fid'] !== null ? autolinker.link(String(feature.properties['fid']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Matricula'] !== null ? autolinker.link(String(feature.properties['Matricula']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['area_ha'] !== null ? autolinker.link(String(feature.properties['area_ha']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_Eucalipto_16_0() {
+            return {
+                pane: 'pane_Eucalipto_16',
+                opacity: 0.5,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 0.5,
+                fillColor: 'rgba(229,182,54,1.0)',
+                interactive: false,
+            }
+        }
+        map.createPane('pane_Eucalipto_16');
+        map.getPane('pane_Eucalipto_16').style.zIndex = 416;
+        map.getPane('pane_Eucalipto_16').style['mix-blend-mode'] = 'normal';
+        var layer_Eucalipto_16 = new L.geoJson(json_Eucalipto_16, {
+            attribution: '',
+            interactive: false,
+            dataVar: 'json_Eucalipto_16',
+            layerName: 'layer_Eucalipto_16',
+            pane: 'pane_Eucalipto_16',
+            onEachFeature: pop_Eucalipto_16,
+            style: style_Eucalipto_16_0,
+        });
+        bounds_group.addLayer(layer_Eucalipto_16);
+        function pop_Pinus2024_17(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['fid'] !== null ? autolinker.link(String(feature.properties['fid']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Matricula'] !== null ? autolinker.link(String(feature.properties['Matricula']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['area_ha'] !== null ? autolinker.link(String(feature.properties['area_ha']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_Pinus2024_17_0() {
+            return {
+                pane: 'pane_Pinus2024_17',
+                opacity: 0.5,
+                color: 'rgba(56,128,54,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 0.5,
+                fillColor: 'rgba(77,175,74,1.0)',
+                interactive: false,
+            }
+        }
+        map.createPane('pane_Pinus2024_17');
+        map.getPane('pane_Pinus2024_17').style.zIndex = 417;
+        map.getPane('pane_Pinus2024_17').style['mix-blend-mode'] = 'normal';
+        var layer_Pinus2024_17 = new L.geoJson(json_Pinus2024_17, {
+            attribution: '',
+            interactive: false,
+            dataVar: 'json_Pinus2024_17',
+            layerName: 'layer_Pinus2024_17',
+            pane: 'pane_Pinus2024_17',
+            onEachFeature: pop_Pinus2024_17,
+            style: style_Pinus2024_17_0,
+        });
+        bounds_group.addLayer(layer_Pinus2024_17);
+        function pop_Matrcula17184_18(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['fid'] !== null ? autolinker.link(String(feature.properties['fid']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['area_ha'] !== null ? autolinker.link(String(feature.properties['area_ha']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_Matrcula17184_18_0() {
+            return {
+                pane: 'pane_Matrcula17184_18',
+                opacity: 1,
+                color: 'rgba(228,26,28,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 4.0,
+                fillOpacity: 0,
+                interactive: false,
+            }
+        }
+        map.createPane('pane_Matrcula17184_18');
+        map.getPane('pane_Matrcula17184_18').style.zIndex = 418;
+        map.getPane('pane_Matrcula17184_18').style['mix-blend-mode'] = 'normal';
+        var layer_Matrcula17184_18 = new L.geoJson(json_Matrcula17184_18, {
+            attribution: '',
+            interactive: false,
+            dataVar: 'json_Matrcula17184_18',
+            layerName: 'layer_Matrcula17184_18',
+            pane: 'pane_Matrcula17184_18',
+            onEachFeature: pop_Matrcula17184_18,
+            style: style_Matrcula17184_18_0,
+        });
+        bounds_group.addLayer(layer_Matrcula17184_18);
+        map.addLayer(layer_Matrcula17184_18);
+        function pop_Matrcula17183_19(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['fid'] !== null ? autolinker.link(String(feature.properties['fid']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['area_ha'] !== null ? autolinker.link(String(feature.properties['area_ha']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_Matrcula17183_19_0() {
+            return {
+                pane: 'pane_Matrcula17183_19',
+                opacity: 1,
+                color: 'rgba(228,26,28,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 4.0,
+                fillOpacity: 0,
+                interactive: false,
+            }
+        }
+        map.createPane('pane_Matrcula17183_19');
+        map.getPane('pane_Matrcula17183_19').style.zIndex = 419;
+        map.getPane('pane_Matrcula17183_19').style['mix-blend-mode'] = 'normal';
+        var layer_Matrcula17183_19 = new L.geoJson(json_Matrcula17183_19, {
+            attribution: '',
+            interactive: false,
+            dataVar: 'json_Matrcula17183_19',
+            layerName: 'layer_Matrcula17183_19',
+            pane: 'pane_Matrcula17183_19',
+            onEachFeature: pop_Matrcula17183_19,
+            style: style_Matrcula17183_19_0,
+        });
+        bounds_group.addLayer(layer_Matrcula17183_19);
+        map.addLayer(layer_Matrcula17183_19);
+        function pop_Matricula_dot_20(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['fid'] !== null ? autolinker.link(String(feature.properties['fid']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Matricula'] !== null ? autolinker.link(String(feature.properties['Matricula']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_Matricula_dot_20_0() {
+            return {
+                fill: false,
+                stroke: false,
+                interactive: false
+            }
+        }
+        map.createPane('pane_Matricula_dot_20');
+        map.getPane('pane_Matricula_dot_20').style.zIndex = 420;
+        map.getPane('pane_Matricula_dot_20').style['mix-blend-mode'] = 'normal';
+        var layer_Matricula_dot_20 = new L.geoJson(json_Matricula_dot_20, {
+            attribution: '',
+            interactive: false,
+            dataVar: 'json_Matricula_dot_20',
+            layerName: 'layer_Matricula_dot_20',
+            pane: 'pane_Matricula_dot_20',
+            onEachFeature: pop_Matricula_dot_20,
+            pointToLayer: function (feature, latlng) {
+                var context = {
+                    feature: feature,
+                    variables: {}
+                };
+                return L.circleMarker(latlng, style_Matricula_dot_20_0(feature));
+            },
+        });
+        bounds_group.addLayer(layer_Matricula_dot_20);
+        map.addLayer(layer_Matricula_dot_20);
+        /* ====== Documentação (PDFs) ====== */
+        function createDocLayer(url){
+            var g = L.layerGroup();
+            g._docUrl = url;
+            return g;
+        }
+        var doc_matricula_17183 = createDocLayer('docs/matriculas/Matricula_17.183.pdf');
+        var doc_matricula_17184 = createDocLayer('docs/matriculas/Matricula_17.184.pdf');
+        var doc_car_entre_rios_rietta = createDocLayer('docs/car/CAR_17.183_17.184_Antigo.pdf');
+
+        var overlaysTree = [
+        {label: '<b>Matrículas</b>', collapsed: true, selectAllCheckbox: true, children: [
+            {label: '<img src="legend/Matrcula17183_19.png" /> Matrícula 17.183', layer: layer_Matrcula17183_19},
+            {label: '<img src="legend/Matrcula17184_18.png" /> Matrícula 17.184', layer: layer_Matrcula17184_18}
+        ]},
+        {label: '<b>Plantio</b>', collapsed: true, selectAllCheckbox: true, children: [
+            {label: '<img src="legend/Pinus2024_17.png" /> Pinus 2024', layer: layer_Pinus2024_17},
+            {label: '<img src="legend/Eucalipto_16.png" /> Eucalipto', layer: layer_Eucalipto_16}
+        ]},
+        {label: '<b>Uso do Solo</b>', collapsed: true, selectAllCheckbox: true, children: [
+            {label: '<img src="legend/Estrada_15.png" /> Estradas internas', layer: layer_Estrada_15},
+            {label: '<img src="legend/FaixadeServido_14.png" /> Faixa de Servidão', layer: layer_FaixadeServido_14},
+            {label: '<img src="legend/Vegetao_13.png" /> Vegetação', layer: layer_Vegetao_13}
+        ]},
+        {label: '<b>Hidrografia</b>', collapsed: true, selectAllCheckbox: true, children: [
+            {label: '<img src="legend/APP_12.png" /> APP', layer: layer_APP_12},
+            {label: '<img src="legend/CursoDgua_11.png" /> Curso D\'Água', layer: layer_CursoDgua_11}
+        ]},
+        {label: '<b>Ortomosaico</b>', collapsed: true, selectAllCheckbox: true, children: [
+            {label: "Orto_Segmentada_Rietta-3-1", layer: layer_Orto_Segmentada_Rietta31_10},
+            {label: "Orto_Segmentada_Rietta-3-0", layer: layer_Orto_Segmentada_Rietta30_9},
+            {label: "Orto_Segmentada_Rietta-2-2", layer: layer_Orto_Segmentada_Rietta22_8},
+            {label: "Orto_Segmentada_Rietta-2-1", layer: layer_Orto_Segmentada_Rietta21_7},
+            {label: "Orto_Segmentada_Rietta-2-0", layer: layer_Orto_Segmentada_Rietta20_6},
+            {label: "Orto_Segmentada_Rietta-1-2", layer: layer_Orto_Segmentada_Rietta12_5},
+            {label: "Orto_Segmentada_Rietta-1-1", layer: layer_Orto_Segmentada_Rietta11_4},
+            {label: "Orto_Segmentada_Rietta-1-0", layer: layer_Orto_Segmentada_Rietta10_3},
+            {label: "Orto_Segmentada_Rietta-0-2", layer: layer_Orto_Segmentada_Rietta02_2},
+            {label: "Orto_Segmentada_Rietta-0-1", layer: layer_Orto_Segmentada_Rietta01_1}
+        ]},
+        {label: "Google Satélite", layer: layer_GoogleSatellite_0},
+        {label: '<b>Documentação</b>', collapsed: true, selectAllCheckbox: false, children: [
+            {label: '<b>Matrícula</b>', collapsed: true, selectAllCheckbox: false, children: [
+                {label: '<a class="doc-link" href="docs/matriculas/Matricula_17.183.pdf" target="_blank">Matrícula 17.183</a>', layer: doc_matricula_17183},
+                {label: '<a class="doc-link" href="docs/matriculas/Matricula_17.184.pdf" target="_blank">Matrícula 17.184</a>', layer: doc_matricula_17184}
+            ]},
+            {label: '<b>CAR</b>', collapsed: true, selectAllCheckbox: false, children: [
+                {label: '<a class="doc-link" href="docs/car/CAR_17.183_17.184_Antigo.pdf" target="_blank">CAR</a>', layer: doc_car_entre_rios_rietta}
+            ]}
+        ]},
+        {label: '<a class="doc-link" href="uso_do_solo_do_entre_rios_rietta.html" target="_blank"><b>Tabela de Uso do Solo - Áreas</b></a>', layer: createDocLayer('uso_do_solo_do_entre_rios_rietta.html')}
+        ]
+        var lay = L.control.layers.tree(null, overlaysTree,{
+            collapsed: true,
+        });
+        lay.addTo(map);
+
+        // ====== Controle de camadas: abrir/fechar somente por clique ======
+        (function setupLayersClickOnly(){
+            try{
+                if (typeof lay === 'undefined' || !lay || !lay._container) return;
+                var ctl = lay._container;
+                var toggle = ctl.querySelector('.leaflet-control-layers-toggle');
+                ['mouseover', 'mouseout', 'mouseenter', 'mouseleave'].forEach(function(evtName){
+                    ctl.addEventListener(evtName, function(ev){ ev.stopImmediatePropagation(); }, true);
+                });
+                if (toggle){
+                    toggle.addEventListener('click', function(ev){
+                        ev.preventDefault();
+                        ev.stopImmediatePropagation();
+                        if (L.DomUtil.hasClass(ctl, 'leaflet-control-layers-expanded')) {
+                            lay.collapse();
+                            document.body.classList.remove('layers-open');
+                        } else {
+                            lay.expand();
+                            document.body.classList.add('layers-open');
+                        }
+                    }, true);
+                }
+            }catch(err){}
+        })();
+
+        // ====== Documentação: itens como links (sem checkbox / sem estado de layer) ======
+        function setupDocLinks(){
+            try{
+                if (typeof lay === 'undefined' || !lay || !lay._container) return;
+                var links = lay._container.querySelectorAll('a.doc-link');
+                for (var i=0; i<links.length; i++){
+                    (function(a){
+                        a.addEventListener('click', function(ev){ ev.stopPropagation(); }, true);
+                        var li = a.closest('li');
+                        if (li){
+                            var input = li.querySelector('input[type="checkbox"]');
+                            if (input){ input.checked = false; input.disabled = true; input.style.display = 'none'; }
+                            li.addEventListener('click', function(ev){
+                                if (ev.target && ev.target.closest && ev.target.closest('a.doc-link')) return;
+                                ev.stopPropagation(); ev.preventDefault();
+                            }, true);
+                        }
+                    })(links[i]);
+                }
+            }catch(err){}
+        }
+        setTimeout(setupDocLinks, 0);
+
+        // ====== Botão 123: liga/desliga os números das matrículas ======
+        var matriculasLabelsVisible = true;
+        var label123Btn = null;
+        function setMatriculasLabelsVisible(visible){
+            matriculasLabelsVisible = !!visible;
+            if (matriculasLabelsVisible) {
+                try { if (!map.hasLayer(layer_Matricula_dot_20)) map.addLayer(layer_Matricula_dot_20); } catch(e) {}
+                document.body.classList.remove('hide-matriculas-labels');
+                if (label123Btn) label123Btn.classList.add('is-active');
+            } else {
+                try { if (map.hasLayer(layer_Matricula_dot_20)) map.removeLayer(layer_Matricula_dot_20); } catch(e) {}
+                document.body.classList.add('hide-matriculas-labels');
+                if (label123Btn) label123Btn.classList.remove('is-active');
+            }
+            try { resetLabels([layer_Matricula_dot_20]); } catch(e) {}
+        }
+        var Labels123Control = L.Control.extend({
+            options: { position: 'topleft' },
+            onAdd: function(map) {
+                var container = L.DomUtil.create('div', 'leaflet-bar leaflet-control ecomap-labels-controls');
+                var link = L.DomUtil.create('a', '', container);
+                link.href = '#';
+                link.title = 'Ativar/desativar número das matrículas';
+                link.setAttribute('aria-label', 'Ativar/desativar número das matrículas');
+                link.innerHTML = '123';
+                label123Btn = link;
+                L.DomEvent.disableClickPropagation(container);
+                L.DomEvent.on(link, 'click', function(e) {
+                    L.DomEvent.stop(e);
+                    setMatriculasLabelsVisible(!matriculasLabelsVisible);
+                });
+                setTimeout(function(){ setMatriculasLabelsVisible(true); }, 0);
+                return container;
+            }
+        });
+        map.addControl(new Labels123Control());
+
+        // ====== Enquadramento inicial igual ao botão de recentralizar ======
+        try {
+            if (bounds_group && bounds_group.getBounds && bounds_group.getBounds().isValid()) {
+                map.fitBounds(bounds_group.getBounds(), {padding: [20, 20]});
+            }
+        } catch(err) {}
+
+        setBounds();
+        var i = 0;
+        layer_Matricula_dot_20.eachLayer(function(layer) {
+            var context = {
+                feature: layer.feature,
+                variables: {}
+            };
+            layer.bindTooltip((layer.feature.properties['Matricula'] !== null?String('<div style="color: #ffffff; font-size: 10pt; font-weight: bold; font-family: \'Open Sans\', sans-serif;">' + layer.feature.properties['Matricula']) + '</div>':''), {permanent: true, offset: [-0, -16], className: 'css_Matricula_dot_20'});
+            labels.push(layer);
+            totalMarkers += 1;
+              layer.added = true;
+              addLabel(layer, i);
+              i++;
+        });
+        L.ImageOverlay.include({
+            getBounds: function () {
+                return this._bounds;
+            }
+        });
+        resetLabels([layer_Matricula_dot_20]);
+        map.on("zoomend", function(){
+            resetLabels([layer_Matricula_dot_20]);
+        });
+        map.on("layeradd", function(){
+            resetLabels([layer_Matricula_dot_20]);
+        });
+        map.on("layerremove", function(){
+            resetLabels([layer_Matricula_dot_20]);
+        });
+        </script>        
+    </body>
+</html>
